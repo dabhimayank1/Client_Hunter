@@ -23,10 +23,11 @@ echo.
 echo ================================================================
 echo    SUCCESS! SYSTEM IS RUNNING LIVE 24/7
 echo ================================================================
-echo    - Web CRM Dashboard: http://localhost:5173/
-echo    - Scraper & Jobs:    http://localhost:5173/search
-echo    - Backend Health:    http://localhost:5000/api/health
-echo    - Database:          SQL Server (ai_client_hunter)
+echo    - Desktop Dashboard:  http://localhost:5173/
+echo    - Mobile Phone (Wi-Fi): http://192.168.1.9:5173/
+echo    - Scraper & Jobs:     http://localhost:5173/search
+echo    - Backend Health:     http://localhost:5000/api/health
+echo    - Database:           SQL Server (ai_client_hunter)
 echo ================================================================
 echo.
 echo IMPORTANT TIPS FOR 24/7 UNINTERRUPTED RUNNING:

@@ -36,3 +36,5 @@ appsettings.Production.json
 # Builds & Backups
 publish/
 *.bak
+*.exe
+tools/
