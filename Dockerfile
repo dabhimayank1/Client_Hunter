@@ -26,29 +26,16 @@ COPY --from=build-client /src/client/dist /app/publish/wwwroot
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
-# Install Chromium and Node.js for Puppeteer scrapers
+# Install Chromium, Node.js, and npm for Puppeteer scrapers
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    gnupg \
+    ca-certificates \
     chromium \
     fonts-liberation \
-    libnss3 \
-    libatk-bridge2.0-0 \
-    libx11-xcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxi6 \
-    libxtst6 \
-    libcups2 \
-    libxss1 \
-    libasound2t64 \
-    libpangocairo-1.0-0 \
-    libgtk-3-0 \
-    ca-certificates \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Copy backend binaries and frontend assets
 COPY --from=build-server /app/publish .
