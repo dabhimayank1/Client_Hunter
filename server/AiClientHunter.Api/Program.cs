@@ -55,18 +55,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-// Database registration: SQL Server on Windows LocalDB, SQLite on Linux / Cloud / Docker
+// Database registration:
+// On Linux / Docker / Render: Always use SQLite by default (portable single-file cloud DB).
+// On Windows: Use SQL Server LocalDB by default, or SQLite if configured.
 var isWindows = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
+var envUseSqlite = Environment.GetEnvironmentVariable("USE_SQLITE")?.ToLowerInvariant() == "true";
 var cs = builder.Configuration.GetConnectionString("Default");
-var useSqlite = builder.Configuration.GetValue<bool>("UseSqlite") ||
-                builder.Configuration["DATABASE_PROVIDER"]?.ToLowerInvariant() == "sqlite" ||
-                (!isWindows && (string.IsNullOrWhiteSpace(cs) || !cs.Contains("Server=")));
+
+var useSqlite = !isWindows || envUseSqlite || builder.Configuration.GetValue<bool>("UseSqlite") ||
+                builder.Configuration["DATABASE_PROVIDER"]?.ToLowerInvariant() == "sqlite";
 
 builder.Services.AddDbContext<AppDbContext>(o =>
 {
-    if (useSqlite || string.IsNullOrWhiteSpace(cs))
+    if (useSqlite)
     {
-        var dbPath = builder.Configuration["SQLITE_PATH"] ?? Path.Combine(AppContext.BaseDirectory, "clienthunter.db");
+        var dbPath = Environment.GetEnvironmentVariable("SQLITE_PATH") ?? 
+                     builder.Configuration["SQLITE_PATH"] ?? 
+                     Path.Combine(AppContext.BaseDirectory, "clienthunter.db");
+
+        var dir = Path.GetDirectoryName(dbPath);
+        if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
         o.UseSqlite($"Data Source={dbPath}");
     }
     else
