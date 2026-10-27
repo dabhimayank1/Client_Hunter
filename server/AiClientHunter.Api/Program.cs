@@ -48,13 +48,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-// Database registration (SQL Server 2022)
-var cs = builder.Configuration.GetConnectionString("Default")
-    ?? "Server=localhost;Database=ai_client_hunter;Trusted_Connection=True;TrustServerCertificate=True;";
+// Database registration: SQL Server on Windows LocalDB, SQLite on Linux / Cloud / Docker
+var isWindows = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
+var cs = builder.Configuration.GetConnectionString("Default");
+var useSqlite = builder.Configuration.GetValue<bool>("UseSqlite") ||
+                builder.Configuration["DATABASE_PROVIDER"]?.ToLowerInvariant() == "sqlite" ||
+                (!isWindows && (string.IsNullOrWhiteSpace(cs) || !cs.Contains("Server=")));
 
 builder.Services.AddDbContext<AppDbContext>(o =>
 {
-    o.UseSqlServer(cs);
+    if (useSqlite || string.IsNullOrWhiteSpace(cs))
+    {
+        var dbPath = builder.Configuration["SQLITE_PATH"] ?? Path.Combine(AppContext.BaseDirectory, "clienthunter.db");
+        o.UseSqlite($"Data Source={dbPath}");
+    }
+    else
+    {
+        o.UseSqlServer(cs);
+    }
 });
 
 // Register Phase 5 OpenStreetMap Overpass Source Adapter
@@ -126,28 +137,33 @@ app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Serve React production build from wwwroot
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 // Map Endpoints
 app.MapAuthEndpoints();
 app.MapLeadEndpoints();
 app.MapJobEndpoints();
 app.MapDraftEndpoints();
 
-// Seed sample data in development
-if (app.Environment.IsDevelopment())
+// Initialize Database & Seed sample data
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     try
     {
-        if (await db.Database.CanConnectAsync())
-        {
-            await DbSeeder.SeedAsync(db);
-        }
+        await db.Database.EnsureCreatedAsync();
+        await DbSeeder.SeedAsync(db);
     }
     catch (Exception ex)
     {
         app.Logger.LogWarning(ex, "Could not seed database on startup.");
     }
+}
+
+if (app.Environment.IsDevelopment())
+{
 
     app.MapPost("/api/dev/db-check", async (AppDbContext db) =>
     {
@@ -185,5 +201,7 @@ app.MapGet("/api/health", async (AppDbContext db) =>
         serverTimeUtc = DateTime.UtcNow
     });
 });
+
+app.MapFallbackToFile("index.html");
 
 app.Run();

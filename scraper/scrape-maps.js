@@ -2,7 +2,14 @@ const puppeteer = require("puppeteer-core");
 const fs = require("fs");
 
 function getBrowserPath() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
   const candidates = [
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/google-chrome",
     "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
     "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
     "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
@@ -11,8 +18,9 @@ function getBrowserPath() {
   for (const p of candidates) {
     if (fs.existsSync(p)) return p;
   }
-  throw new Error("Neither Google Chrome nor Microsoft Edge was found.");
+  throw new Error("Neither Chromium nor Google Chrome / Edge was found.");
 }
+
 
 async function scrapeGoogleMaps(city, category, limit = 15) {
   const browserPath = getBrowserPath();

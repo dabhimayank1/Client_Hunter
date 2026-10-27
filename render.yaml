@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: client-hunter
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: USE_SQLITE
+        value: "true"
+      - key: SQLITE_PATH
+        value: /app/data/clienthunter.db

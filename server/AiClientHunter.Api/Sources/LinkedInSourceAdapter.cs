@@ -18,15 +18,7 @@ public class LinkedInSourceAdapter(ILogger<LinkedInSourceAdapter> log) : ISource
 
         try
         {
-            var scraperDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../scraper"));
-            if (!Directory.Exists(scraperDir))
-            {
-                scraperDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../scraper"));
-            }
-            if (!Directory.Exists(scraperDir))
-            {
-                scraperDir = @"c:\Users\DELL\Desktop\client hunter\scraper";
-            }
+            var scraperDir = ScraperPathHelper.GetScraperDirectory();
 
             var scriptPath = Path.Combine(scraperDir, "scrape-linkedin.js");
             if (!File.Exists(scriptPath))
