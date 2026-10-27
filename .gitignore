@@ -1,0 +1,38 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Node
+node_modules/
+dist/
+.npm
+npm-debug.log*
+yarn-error.log*
+
+# OS & Editors
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs & scratch
+*.log
+scratch/
+*.tmp
+
+# Secrets
+.env
+.env.local
+*.secrets.json
+appsettings.Development.json
+appsettings.Production.json
+
+# Builds & Backups
+publish/
+*.bak
