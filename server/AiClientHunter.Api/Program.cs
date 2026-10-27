@@ -13,6 +13,13 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Cloud environment: Bind to 0.0.0.0 using PORT env variable (Render / Docker / VPS)
+var envPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(envPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{envPort}");
+}
+
 // Configure JSON serialization to ignore circular references
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -204,4 +211,11 @@ app.MapGet("/api/health", async (AppDbContext db) =>
 
 app.MapFallbackToFile("index.html");
 
-app.Run();
+if (!string.IsNullOrWhiteSpace(envPort))
+{
+    app.Run($"http://0.0.0.0:{envPort}");
+}
+else
+{
+    app.Run();
+}
