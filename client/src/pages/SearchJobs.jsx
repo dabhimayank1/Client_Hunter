@@ -528,6 +528,11 @@ export default function SearchJobs() {
                     <span className="mobile-job-time">
                       🕒 {j.finishedAt ? `Done: ${formatJobTime(j.finishedAt)}` : `Queued: ${formatJobTime(j.createdAt)}`}
                     </span>
+                    {j.error && (
+                      <div className="cell-error" style={{ color: "#ef4444", fontSize: 12, marginTop: 4, width: "100%" }}>
+                        ⚠️ {j.error}
+                      </div>
+                    )}
                     {j.status === "completed" && (j.newLeads > 0 || j.recordsFound > 0) && (
                       <Link
                         to={`/?platform=${encodeURIComponent(j.source)}`}

@@ -456,6 +456,11 @@ public class JobWorker(
             job.Duplicates = duplicatesCount;
             job.Status = "completed";
 
+            if (records.Count == 0 && string.IsNullOrWhiteSpace(job.Error))
+            {
+                job.Error = $"0 records found from source '{job.Source}' for '{job.Category}' in '{job.City}'. Tip: Try 'Dental Clinic' or 'Restaurant' on Google/Justdial, or try 'Zauba Corp' / 'Freelancer' for software.";
+            }
+
             log.LogInformation("Job #{Id} completed: {Found} found, {New} new leads, {Dupes} duplicates.",
                 job.Id, job.RecordsFound, job.NewLeads, job.Duplicates);
         }

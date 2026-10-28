@@ -69,9 +69,10 @@ async function scrapeGoogleMaps(city, category, limit = 15) {
     const url = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
 
     try {
-      await page.goto(url, { waitUntil: "networkidle2", timeout: 25000 });
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await new Promise((r) => setTimeout(r, 2000));
     } catch (e) {
-      // ignore networkidle timeout if DOM loaded
+      // ignore timeout if DOM loaded
     }
 
     try {
