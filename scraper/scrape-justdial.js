@@ -59,15 +59,13 @@ async function scrapeJustdial(city = "Ahmedabad", category = "Dental-Clinics", l
 
   try {
     const page = await browser.newPage();
-  await page.emulate({
-    viewport: { width: 390, height: 844, isMobile: true, hasTouch: true },
-    userAgent:
-      "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
-  });
+    await page.emulate({
+      viewport: { width: 390, height: 844, isMobile: true, hasTouch: true },
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+    });
 
-  let capturedApiResults = [];
-
-  page.on("response", async (res) => {
+    page.on("response", async (res) => {
     const u = res.url();
     if (u.includes("searchziva.php")) {
       try {
@@ -151,7 +149,6 @@ async function scrapeJustdial(city = "Ahmedabad", category = "Dental-Clinics", l
   } catch (e) {}
 
   // If API didn't provide enough results, extract from DOM
-  let domResults = [];
   if (capturedApiResults.length < limit) {
     try {
       domResults = await page.evaluate((targetCity, catName, pageUrl) => {

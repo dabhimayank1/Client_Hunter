@@ -114,15 +114,7 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
         var items = new List<SearchItem>();
         try
         {
-            var scraperDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../scraper"));
-            if (!Directory.Exists(scraperDir))
-            {
-                scraperDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../scraper"));
-            }
-            if (!Directory.Exists(scraperDir))
-            {
-                scraperDir = @"c:\Users\DELL\Desktop\client hunter\scraper";
-            }
+            var scraperDir = ScraperPathHelper.GetScraperDirectory();
 
             var scriptPath = Path.Combine(scraperDir, "scrape-maps.js");
             if (!File.Exists(scriptPath))

@@ -27,15 +27,7 @@ public class ContactEnrichmentService(ILogger<ContactEnrichmentService> log)
 
         if (itemList.Count == 0) return results;
 
-        var scraperDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../scraper"));
-        if (!Directory.Exists(scraperDir))
-        {
-            scraperDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../scraper"));
-        }
-        if (!Directory.Exists(scraperDir))
-        {
-            scraperDir = @"c:\Users\DELL\Desktop\client hunter\scraper";
-        }
+        var scraperDir = Sources.ScraperPathHelper.GetScraperDirectory();
 
         var scriptPath = Path.Combine(scraperDir, "enrich-contact.js");
         if (!File.Exists(scriptPath))

@@ -77,7 +77,7 @@ async function scrapeGoogleMaps(city, category, limit = 15) {
   } catch (e) {}
 
   // Extract places
-  const places = await page.evaluate(
+  places = await page.evaluate(
     (targetCity, targetCategory) => {
       const results = [];
       const seen = new Set();
