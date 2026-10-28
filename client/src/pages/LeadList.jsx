@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, getExportUrl } from "../api";
+import { api, downloadLeadsCsv } from "../api";
 
 function formatDateTime(isoString) {
   if (!isoString) return { date: "—", time: "", isToday: false, relative: "" };
@@ -65,8 +65,20 @@ export default function LeadList() {
 
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      await downloadLeadsCsv(priority, status, city, category, platform, dateRange, sortBy);
+    } catch (err) {
+      alert("Failed to export leads: " + err.message);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Fetch filter metadata
   const fetchMeta = async () => {
@@ -282,14 +294,15 @@ export default function LeadList() {
         </div>
 
         <div className="crm-export-actions">
-          <a
-            href={getExportUrl(priority, status, city, category, platform, dateRange, sortBy)}
+          <button
+            type="button"
+            onClick={handleExport}
             className="btn btn-secondary btn-sm"
-            target="_blank"
-            rel="noreferrer"
+            disabled={exporting}
+            title="Download CSV of current filtered leads"
           >
-            📥 Export CSV
-          </a>
+            {exporting ? "⏳ Exporting..." : "📥 Export CSV"}
+          </button>
         </div>
       </div>
 

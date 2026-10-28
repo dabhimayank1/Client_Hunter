@@ -1,10 +1,20 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import LeadList from "./pages/LeadList";
 import LeadDetail from "./pages/LeadDetail";
 import SearchJobs from "./pages/SearchJobs";
 import ApprovalQueue from "./pages/ApprovalQueue";
+import Login from "./pages/Login";
 import { api } from "./api";
+import { getToken, clearToken } from "./auth";
+
+function ProtectedRoute({ children }) {
+  const token = getToken();
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
 
 function AppLayout({ health, children }) {
   const location = useLocation();
@@ -14,6 +24,11 @@ function AppLayout({ health, children }) {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  const handleLogout = () => {
+    clearToken();
+    window.location.href = "/login";
+  };
 
   const getPageTitle = () => {
     if (location.pathname === "/") return { title: "Leads CRM", sub: "Data-First Pipeline & Lead Database" };
@@ -46,9 +61,20 @@ function AppLayout({ health, children }) {
           <span className="brand-badge-icon">🏹</span>
           <span className="mobile-brand-title">Client Hunter</span>
         </Link>
-        <Link to="/search" className="btn-mobile-action">
-          + Scrape
-        </Link>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <Link to="/search" className="btn-mobile-action">
+            + Scrape
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="btn-mobile-action"
+            style={{ background: "#dc2626", borderColor: "#ef4444" }}
+            title="Logout"
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       {/* Mobile Drawer Overlay */}
@@ -100,6 +126,25 @@ function AppLayout({ health, children }) {
             <span className="nav-item-label">Approval Queue</span>
             {isNavActive("/drafts") && <span className="active-dot" />}
           </Link>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="sidebar-nav-item btn-logout"
+            style={{
+              width: "100%",
+              background: "transparent",
+              border: "none",
+              color: "inherit",
+              font: "inherit",
+              textAlign: "left",
+              cursor: "pointer",
+              marginTop: "8px"
+            }}
+          >
+            <span className="nav-item-icon">🚪</span>
+            <span className="nav-item-label">Logout</span>
+          </button>
         </nav>
 
         <div className="sidebar-section-label">SOURCES CONNECTED</div>
@@ -111,6 +156,7 @@ function AppLayout({ health, children }) {
           <span className="source-pill">🔴 Reddit</span>
           <span className="source-pill">🏢 Zauba Corp</span>
           <span className="source-pill">💼 LinkedIn</span>
+          <span className="source-pill">🗺️ OpenStreetMap</span>
         </div>
 
         <div className="sidebar-footer">
@@ -143,6 +189,14 @@ function AppLayout({ health, children }) {
             <Link to="/search" className="btn btn-topbar-primary">
               <span className="btn-icon">+</span> Run Scraper
             </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn btn-secondary btn-sm"
+              title="Sign out of Client Hunter"
+            >
+              🚪 Logout
+            </button>
             {health && (
               <div className="topbar-status-pill">
                 <span className={`status-dot ${health.database === "ok" ? "dot-online" : "dot-offline"}`} />
@@ -208,17 +262,27 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AppLayout health={health}>
-        <Routes>
-          <Route path="/" element={<LeadList />} />
-          <Route path="/leads/:id" element={<LeadDetail />} />
-          <Route path="/drafts" element={<ApprovalQueue />} />
-          <Route path="/search" element={<SearchJobs />} />
-          <Route path="/search-jobs" element={<SearchJobs />} />
-          <Route path="/jobs" element={<SearchJobs />} />
-          <Route path="*" element={<LeadList />} />
-        </Routes>
-      </AppLayout>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <AppLayout health={health}>
+                <Routes>
+                  <Route path="/" element={<LeadList />} />
+                  <Route path="/leads/:id" element={<LeadDetail />} />
+                  <Route path="/drafts" element={<ApprovalQueue />} />
+                  <Route path="/search" element={<SearchJobs />} />
+                  <Route path="/search-jobs" element={<SearchJobs />} />
+                  <Route path="/jobs" element={<SearchJobs />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }
