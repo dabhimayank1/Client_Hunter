@@ -61,7 +61,7 @@ public class JobWorker(
 
         var adapters = scope.ServiceProvider.GetServices<ISourceAdapter>();
         var adapter = adapters.FirstOrDefault(a => a.Name.Equals(job.Source, StringComparison.OrdinalIgnoreCase))
-                      ?? adapters.FirstOrDefault(a => a.Name == "google")
+                      ?? adapters.FirstOrDefault(a => a.Name == "osm")
                       ?? adapters.First();
 
         var websiteChecker = scope.ServiceProvider.GetRequiredService<WebsiteChecker>();
@@ -454,11 +454,14 @@ public class JobWorker(
 
             job.NewLeads = newLeadsCount;
             job.Duplicates = duplicatesCount;
-            job.Status = "completed";
-
-            if (records.Count == 0 && string.IsNullOrWhiteSpace(job.Error))
+            if (records.Count == 0)
             {
-                job.Error = $"0 records found from source '{job.Source}' for '{job.Category}' in '{job.City}'. Tip: Try 'Dental Clinic' or 'Restaurant' on Google/Justdial, or try 'Zauba Corp' / 'Freelancer' for software.";
+                job.Status = "failed";
+                job.Error = $"0 records from '{job.Source}'. Check server logs: the source may be blocked or the scraper may have crashed.";
+            }
+            else
+            {
+                job.Status = "completed";
             }
 
             log.LogInformation("Job #{Id} completed: {Found} found, {New} new leads, {Dupes} duplicates.",

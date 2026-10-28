@@ -91,7 +91,7 @@ function formatJobTime(isoString) {
 
 export default function SearchJobs() {
   const [jobs, setJobs] = useState([]);
-  const [source, setSource] = useState("justdial");
+  const [source, setSource] = useState("osm");
   const [selectedCity, setSelectedCity] = useState("Ahmedabad");
   const [customCity, setCustomCity] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Dental Clinic");
@@ -240,13 +240,13 @@ export default function SearchJobs() {
                 onChange={(e) => handleSourceChange(e.target.value)}
                 className="select-input"
               >
+                <option value="osm">🗺️ OpenStreetMap (Directory Extraction)</option>
                 <option value="justdial">📞 Justdial (Local Indian Businesses & Direct Phone)</option>
                 <option value="zaubacorp">🏢 Zauba Corp (Newly Registered Indian Companies & LLPs)</option>
                 <option value="google">🌐 Google Web Search (No-Website Local Businesses)</option>
                 <option value="freelancer">🧑‍💻 Freelancer.com (Live Client Projects & Budgets)</option>
                 <option value="upwork">💼 Upwork (Live Remote Client Briefs & Proposals)</option>
                 <option value="reddit">🔴 Reddit (Client Website & Software Projects Only)</option>
-                <option value="osm">🗺️ OpenStreetMap (Directory Extraction)</option>
               </select>
             </div>
 

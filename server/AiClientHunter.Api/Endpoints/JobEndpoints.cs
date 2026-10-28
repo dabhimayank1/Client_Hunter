@@ -36,7 +36,7 @@ public static class JobEndpoints
             {
                 City = req.City.Trim(),
                 Category = req.Category.Trim(),
-                Source = string.IsNullOrWhiteSpace(req.Source) ? "google" : req.Source.Trim().ToLowerInvariant(),
+                Source = string.IsNullOrWhiteSpace(req.Source) ? "osm" : req.Source.Trim().ToLowerInvariant(),
                 LeadType = leadType,
                 ResultLimit = req.Limit,
                 Status = "queued",
@@ -103,4 +103,4 @@ public static class JobEndpoints
     }
 }
 
-public record SearchJobRequest(string City, string Category, string LeadType, int Limit, string? Source = "google");
+public record SearchJobRequest(string City, string Category, string LeadType, int Limit, string? Source = "osm");
