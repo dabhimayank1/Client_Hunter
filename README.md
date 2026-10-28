@@ -101,9 +101,23 @@ npm run dev -- --host
 
 ---
 
+## 🔐 Required Environment Variables
+
+When deploying to production (e.g. Render, Docker, VPS), configure the following environment variables in your deployment dashboard:
+
+| Variable | Description | Requirement / Example |
+|---|---|---|
+| `Jwt__Secret` | Cryptographic key used to sign and verify JWT authentication tokens. | **Required in Production** (min. 32 characters, e.g. `openssl rand -base64 32`). |
+| `ADMIN_EMAIL` | Initial administrator account email seeded on first run. | `admin@yourcompany.com` |
+| `ADMIN_PASSWORD` | Initial administrator account password. | Minimum 10 characters. |
+| `Cors__AllowedOrigins__0` | Allowed cross-origin origin. | Live URL (e.g. `https://client-hunter.onrender.com`), only required if frontend is hosted on a separate domain. |
+
+---
+
 ## 🧪 Testing
 
-Run the full xUnit test suite (56 tests):
+Run the full xUnit test suite (59 passing tests):
 ```bash
 dotnet test "server\AiClientHunter.Tests\AiClientHunter.Tests.csproj"
 ```
+
