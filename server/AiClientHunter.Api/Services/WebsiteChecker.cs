@@ -46,7 +46,9 @@ public class WebsiteChecker(HttpClient http, ILogger<WebsiteChecker> log)
         {
             try
             {
-                var ips = await Dns.GetHostAddressesAsync(host, ct);
+                using var dnsCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                dnsCts.CancelAfter(TimeSpan.FromSeconds(2));
+                var ips = await Dns.GetHostAddressesAsync(host, dnsCts.Token);
                 if (ips.Length > 0)
                 {
                     return new("unknown", "https://" + host,
@@ -54,6 +56,7 @@ public class WebsiteChecker(HttpClient http, ILogger<WebsiteChecker> log)
                 }
             }
             catch (SocketException) { /* does not resolve, check next extension */ }
+            catch (OperationCanceledException) { /* DNS probe timed out, continue */ }
             catch (Exception) { /* timeout/error, continue */ }
         }
 

@@ -62,12 +62,22 @@ public class ContactEnrichmentService(ILogger<ContactEnrichmentService> log)
             var stdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
             var stderrTask = proc.StandardError.ReadToEndAsync(ct);
 
-            await proc.WaitForExitAsync(ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(45));
+            try
+            {
+                await proc.WaitForExitAsync(timeoutCts.Token);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                log.LogWarning("Contact enrichment scraper timed out after 45 seconds, terminating process.");
+                try { proc.Kill(true); } catch { }
+            }
 
             var output = await stdoutTask;
             var err = await stderrTask;
 
-            if (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err))
+            if (proc.HasExited && (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err)))
             {
                 log.LogWarning("Contact enrichment scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
             }

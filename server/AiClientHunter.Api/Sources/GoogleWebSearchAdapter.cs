@@ -29,15 +29,15 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
         // 1. Primary engine: Headless Chrome Google Maps Scraper (Extracts real contact numbers & physical addresses)
         var searchItems = await FetchHeadlessMapsAsync(req.City, req.Category, fetchLimit, ct);
 
-        // 2. Secondary engine: Supplement with OpenStreetMap (Nominatim) if needed
-        if (searchItems.Count < fetchLimit)
+        // 2. Secondary engine: Supplement with OpenStreetMap (Nominatim) only if Maps found fewer than requested limit
+        if (searchItems.Count < req.Limit)
         {
-            var osmItems = await FetchNominatimAsync(req.City, req.Category, fetchLimit - searchItems.Count, ct);
+            var osmItems = await FetchNominatimAsync(req.City, req.Category, req.Limit - searchItems.Count, ct);
             searchItems.AddRange(osmItems);
         }
 
-        // 3. Fallback engine: Bing search with strict city verification if still needed
-        if (searchItems.Count < fetchLimit)
+        // 3. Fallback engine: Bing search with strict city verification only if still needed
+        if (searchItems.Count < req.Limit)
         {
             var bingResults = await FetchBingAsync(req.City, req.Category, ct);
             searchItems.AddRange(bingResults);
@@ -136,11 +136,21 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
             var stdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
             var stderrTask = proc.StandardError.ReadToEndAsync(ct);
 
-            await proc.WaitForExitAsync(ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(90));
+            try
+            {
+                await proc.WaitForExitAsync(timeoutCts.Token);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                log.LogWarning("Google Maps scraper timed out after 90 seconds, terminating process.");
+                try { proc.Kill(true); } catch { }
+            }
 
             var output = await stdoutTask;
             var err = await stderrTask;
-            if (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err))
+            if (proc.HasExited && (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err)))
             {
                 log.LogWarning("Google Maps scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
                 if (items.Count == 0 && proc.ExitCode != 0)

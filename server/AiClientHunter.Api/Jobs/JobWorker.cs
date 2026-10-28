@@ -114,6 +114,7 @@ public class JobWorker(
             }
 
             job.RecordsFound = records.Count;
+            await db.SaveChangesAsync(ct);
 
             // 2. Candidate Selection & Website Filtering
             bool isPlatformJobSource = job.Source == "freelancer" || job.Source == "upwork" || job.Source == "reddit" || job.Source == "linkedin";
@@ -143,8 +144,9 @@ public class JobWorker(
 
             // Google Contact Details Enrichment:
             // Check candidate businesses on Google Maps/Search to find missing Phone, Website, Email, and Address
+            // (Exclude 'google' source because it already originated directly from Google Maps)
             var enrichmentCandidates = candidateList
-                .Where(r => r.SourceName != "freelancer" && r.SourceName != "upwork" && r.SourceName != "reddit" && r.SourceName != "linkedin")
+                .Where(r => r.SourceName != "google" && r.SourceName != "freelancer" && r.SourceName != "upwork" && r.SourceName != "reddit" && r.SourceName != "linkedin")
                 .Where(r => string.IsNullOrWhiteSpace(r.Phone) || string.IsNullOrWhiteSpace(r.Website) || string.IsNullOrWhiteSpace(r.Email))
                 .Select(r => (r.Name, r.City))
                 .ToList();
@@ -442,6 +444,9 @@ public class JobWorker(
                     });
 
                     newLeadsCount++;
+                    job.NewLeads = newLeadsCount;
+                    await db.SaveChangesAsync(ct);
+
                     if (newLeadsCount >= job.ResultLimit)
                     {
                         log.LogInformation("Job #{Id} reached requested limit of {Limit} leads. Concluding job processing.", job.Id, job.ResultLimit);
@@ -449,8 +454,6 @@ public class JobWorker(
                     }
                 }
             }
-
-            await db.SaveChangesAsync(ct);
 
             job.NewLeads = newLeadsCount;
             job.Duplicates = duplicatesCount;
