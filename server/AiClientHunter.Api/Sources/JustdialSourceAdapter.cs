@@ -53,12 +53,6 @@ public class JustdialSourceAdapter(ILogger<JustdialSourceAdapter> log) : ISource
             if (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err))
             {
                 log.LogWarning("Justdial scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
-                if (proc.ExitCode != 0)
-                {
-                    var cleanErr = string.IsNullOrWhiteSpace(err) ? $"Process exited with code {proc.ExitCode}" : err.Trim();
-                    if (cleanErr.Length > 250) cleanErr = cleanErr[..250] + "...";
-                    throw new InvalidOperationException($"Justdial scraper error: {cleanErr}");
-                }
             }
 
             if (!string.IsNullOrWhiteSpace(output))

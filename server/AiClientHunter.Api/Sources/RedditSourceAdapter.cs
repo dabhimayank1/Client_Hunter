@@ -49,12 +49,17 @@ public class RedditSourceAdapter(ILogger<RedditSourceAdapter> log) : ISourceAdap
             var output = await stdoutTask;
             if (!string.IsNullOrWhiteSpace(output))
             {
-                using var doc = JsonDocument.Parse(output);
-                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                var startIndex = output.IndexOf('[');
+                var endIndex = output.LastIndexOf(']');
+                if (startIndex >= 0 && endIndex > startIndex)
                 {
-                    foreach (var el in doc.RootElement.EnumerateArray())
+                    var jsonArray = output.Substring(startIndex, endIndex - startIndex + 1);
+                    using var doc = JsonDocument.Parse(jsonArray);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Array)
                     {
-                        if (records.Count >= req.Limit) break;
+                        foreach (var el in doc.RootElement.EnumerateArray())
+                        {
+                            if (records.Count >= req.Limit) break;
 
                         var id = el.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? Guid.NewGuid().ToString("N") : Guid.NewGuid().ToString("N");
                         var title = el.TryGetProperty("title", out var tProp) ? tProp.GetString() ?? "" : "";
@@ -106,6 +111,7 @@ public class RedditSourceAdapter(ILogger<RedditSourceAdapter> log) : ISourceAdap
                     }
                 }
             }
+        }
 
             log.LogInformation("Reddit Scraper returned {Count} hiring posts for query '{Query}'.", records.Count, query);
         }

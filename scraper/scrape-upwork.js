@@ -37,7 +37,6 @@ async function scrapeUpwork(query, limit = 15) {
     browser = await puppeteer.launch({
       headless: true,
       executablePath: browserPath,
-      dumpio: true,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
