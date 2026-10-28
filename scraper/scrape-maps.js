@@ -33,13 +33,13 @@ async function scrapeGoogleMaps(city, category, limit = 15) {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: browserPath,
-    dumpio: true,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
       "--disable-accelerated-2d-canvas",
+      "--disable-features=AudioServiceOutOfProcess,IsolateOrigins,site-per-process",
       "--lang=en-US,en",
       "--window-size=1280,800",
       ...getProxyArgs(),
