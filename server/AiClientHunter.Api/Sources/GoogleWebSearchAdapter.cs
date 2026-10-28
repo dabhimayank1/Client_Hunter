@@ -150,16 +150,6 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
 
             var output = await stdoutTask;
             var err = await stderrTask;
-            if (proc.HasExited && (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err)))
-            {
-                log.LogWarning("Google Maps scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
-                if (items.Count == 0 && proc.ExitCode != 0)
-                {
-                    var cleanErr = string.IsNullOrWhiteSpace(err) ? $"Process exited with code {proc.ExitCode}" : err.Trim();
-                    if (cleanErr.Length > 250) cleanErr = cleanErr[..250] + "...";
-                    throw new InvalidOperationException($"Google Maps scraper failed: {cleanErr}");
-                }
-            }
 
             if (!string.IsNullOrWhiteSpace(output))
             {
@@ -168,42 +158,53 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
                 if (startIndex >= 0 && endIndex > startIndex)
                 {
                     var jsonArray = output.Substring(startIndex, endIndex - startIndex + 1);
-                    using var doc = JsonDocument.Parse(jsonArray);
-                    if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                    try
                     {
-                        foreach (var el in doc.RootElement.EnumerateArray())
+                        using var doc = JsonDocument.Parse(jsonArray);
+                        if (doc.RootElement.ValueKind == JsonValueKind.Array)
                         {
-                            var name = el.GetProperty("name").GetString() ?? "";
-                            if (string.IsNullOrWhiteSpace(name)) continue;
-
-                            var phone = el.TryGetProperty("phone", out var p) ? p.GetString() : null;
-                            var address = el.TryGetProperty("address", out var a) ? a.GetString() : null;
-                            var hasWebsite = el.TryGetProperty("hasWebsite", out var hw) && hw.GetBoolean();
-                            var website = el.TryGetProperty("website", out var w) ? w.GetString() : null;
-                            if (hasWebsite && string.IsNullOrWhiteSpace(website))
+                            foreach (var el in doc.RootElement.EnumerateArray())
                             {
-                                website = "http://website-listed-on-maps";
-                            }
+                                var name = el.GetProperty("name").GetString() ?? "";
+                                if (string.IsNullOrWhiteSpace(name)) continue;
 
-                            items.Add(new SearchItem(
-                                Title: name,
-                                Snippet: address ?? $"{city}, India",
-                                DestinationUrl: website,
-                                Phone: phone,
-                                Email: null,
-                                Address: address
-                            ));
+                                var phone = el.TryGetProperty("phone", out var p) ? p.GetString() : null;
+                                var address = el.TryGetProperty("address", out var a) ? a.GetString() : null;
+                                var hasWebsite = el.TryGetProperty("hasWebsite", out var hw) && hw.GetBoolean();
+                                var website = el.TryGetProperty("website", out var w) ? w.GetString() : null;
+                                if (hasWebsite && string.IsNullOrWhiteSpace(website))
+                                {
+                                    website = "http://website-listed-on-maps";
+                                }
+
+                                items.Add(new SearchItem(
+                                    Title: name,
+                                    Snippet: address ?? $"{city}, India",
+                                    DestinationUrl: website,
+                                    Phone: phone,
+                                    Email: null,
+                                    Address: address
+                                ));
+                            }
                         }
                     }
+                    catch (JsonException jex)
+                    {
+                        log.LogWarning(jex, "Failed to parse Google Maps output JSON: {Output}", output);
+                    }
                 }
+            }
+
+            if (proc.HasExited && (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err)))
+            {
+                log.LogWarning("Google Maps scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
             }
 
             log.LogInformation("Headless Chrome Scraper returned {Count} places for {Category} in {City}.", items.Count, category, city);
         }
         catch (Exception ex)
         {
-            log.LogWarning(ex, "Headless Chrome scraper could not complete. Continuing with directory extraction.");
-            if (ex is InvalidOperationException) throw;
+            log.LogWarning(ex, "Headless Chrome scraper could not complete. Continuing with directory extraction fallback.");
         }
 
         return items;

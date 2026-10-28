@@ -47,7 +47,6 @@ async function scrapeJustdial(city = "Ahmedabad", category = "Dental-Clinics", l
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: browserPath,
-    dumpio: true,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",

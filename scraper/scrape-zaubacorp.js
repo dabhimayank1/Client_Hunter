@@ -67,7 +67,6 @@ async function scrapeZaubaCorp(city = "Ahmedabad", category = "Software", limit 
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: browserPath,
-    dumpio: true,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
