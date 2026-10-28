@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { getProxyArgs, attachProxyAuth } = require("./proxy-helper");
 
 async function getPuppeteer() {
   const mod = await import("puppeteer-core");
@@ -74,6 +75,7 @@ async function scrapeZaubaCorp(city = "Ahmedabad", category = "Software", limit 
       "--disable-gpu",
       "--disable-accelerated-2d-canvas",
       "--lang=en-US,en",
+      ...getProxyArgs(),
     ],
   });
 
@@ -91,6 +93,7 @@ async function scrapeZaubaCorp(city = "Ahmedabad", category = "Software", limit 
   }
 
   const page = await browser.newPage();
+  await attachProxyAuth(page);
   await page.setUserAgent(
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
   );

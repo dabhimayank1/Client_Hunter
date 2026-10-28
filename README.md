@@ -107,3 +107,15 @@ Run the full xUnit test suite (56 tests):
 ```bash
 dotnet test "server\AiClientHunter.Tests\AiClientHunter.Tests.csproj"
 ```
+
+---
+
+## 🛡️ Cloud Proxy Configuration (Render / VPS)
+
+When deploying to Render or cloud datacenters, commercial directories like **Justdial** and **Zauba Corp** block datacenter IPs. You can unblock all scrapers by setting the `PROXY_URL` environment variable:
+
+```bash
+PROXY_URL=http://username:password@p.webshare.io:80
+```
+Supports HTTP, HTTPS, and SOCKS5 proxies with optional username:password authentication.
+

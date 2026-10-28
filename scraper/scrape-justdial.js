@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { getProxyArgs, attachProxyAuth } = require("./proxy-helper");
 
 async function getPuppeteer() {
   const mod = await import("puppeteer-core");
@@ -54,6 +55,7 @@ async function scrapeJustdial(city = "Ahmedabad", category = "Dental-Clinics", l
       "--disable-gpu",
       "--disable-accelerated-2d-canvas",
       "--lang=en-US,en",
+      ...getProxyArgs(),
     ],
   });
 
@@ -66,6 +68,7 @@ async function scrapeJustdial(city = "Ahmedabad", category = "Dental-Clinics", l
 
   try {
     const page = await browser.newPage();
+    await attachProxyAuth(page);
     await page.emulate({
       viewport: { width: 390, height: 844, isMobile: true, hasTouch: true },
       userAgent:
