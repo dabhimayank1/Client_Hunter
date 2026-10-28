@@ -53,6 +53,12 @@ public class ZaubaCorpSourceAdapter(ILogger<ZaubaCorpSourceAdapter> log) : ISour
             if (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err))
             {
                 log.LogWarning("Zauba Corp scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
+                if (proc.ExitCode != 0)
+                {
+                    var cleanErr = string.IsNullOrWhiteSpace(err) ? $"Process exited with code {proc.ExitCode}" : err.Trim();
+                    if (cleanErr.Length > 250) cleanErr = cleanErr[..250] + "...";
+                    throw new InvalidOperationException($"Zauba Corp scraper error: {cleanErr}");
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(output))
@@ -118,6 +124,7 @@ public class ZaubaCorpSourceAdapter(ILogger<ZaubaCorpSourceAdapter> log) : ISour
         catch (Exception ex)
         {
             log.LogError(ex, "Error occurred during Zauba Corp scraping.");
+            if (ex is InvalidOperationException) throw;
         }
 
         return records;

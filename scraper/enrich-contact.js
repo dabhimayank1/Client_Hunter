@@ -175,13 +175,12 @@ async function enrichBatch(items) {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: browserPath,
+    dumpio: true,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
-      "--no-zygote",
-      "--single-process",
       "--disable-accelerated-2d-canvas",
       "--lang=en-US,en",
     ],

@@ -140,10 +140,15 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
 
             var output = await stdoutTask;
             var err = await stderrTask;
-
             if (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err))
             {
                 log.LogWarning("Google Maps scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
+                if (items.Count == 0 && proc.ExitCode != 0)
+                {
+                    var cleanErr = string.IsNullOrWhiteSpace(err) ? $"Process exited with code {proc.ExitCode}" : err.Trim();
+                    if (cleanErr.Length > 250) cleanErr = cleanErr[..250] + "...";
+                    throw new InvalidOperationException($"Google Maps scraper failed: {cleanErr}");
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(output))
@@ -188,6 +193,7 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
         catch (Exception ex)
         {
             log.LogWarning(ex, "Headless Chrome scraper could not complete. Continuing with directory extraction.");
+            if (ex is InvalidOperationException) throw;
         }
 
         return items;
