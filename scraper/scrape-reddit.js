@@ -1,5 +1,9 @@
-const puppeteer = require("puppeteer-core");
 const fs = require("fs");
+
+async function getPuppeteer() {
+  const mod = await import("puppeteer-core");
+  return mod.default || mod;
+}
 
 function getBrowserPath() {
   if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
@@ -61,6 +65,7 @@ async function scrapeReddit(query, limit = 15) {
   const seenIds = new Set();
 
   try {
+    const puppeteer = await getPuppeteer();
     const browserPath = getBrowserPath();
     browser = await puppeteer.launch({
       headless: true,
