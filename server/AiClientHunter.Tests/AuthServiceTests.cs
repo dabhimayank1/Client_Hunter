@@ -3,12 +3,22 @@ using System.Security.Claims;
 using AiClientHunter.Api.Domain;
 using AiClientHunter.Api.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace AiClientHunter.Tests;
 
 public class AuthServiceTests
 {
+    private class TestHostEnvironment(string envName) : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = envName;
+        public string ApplicationName { get; set; } = "Test";
+        public string ContentRootPath { get; set; } = "";
+        public IFileProvider ContentRootFileProvider { get; set; } = null!;
+    }
+
     private AuthService CreateAuthService()
     {
         var inMemorySettings = new Dictionary<string, string?>
@@ -68,5 +78,43 @@ public class AuthServiceTests
         var roleClaim = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role");
         Assert.NotNull(roleClaim);
         Assert.Equal("admin", roleClaim.Value);
+    }
+
+    [Fact]
+    public void Constructor_Throws_WhenSecretMissingInProduction()
+    {
+        var emptyConfig = new ConfigurationBuilder().Build();
+        var prodEnv = new TestHostEnvironment(Environments.Production);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => new AuthService(emptyConfig, prodEnv));
+        Assert.Contains("shorter than 32 characters", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Constructor_Throws_WhenSecretTooShortInProduction()
+    {
+        var shortSecretConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "Jwt:Secret", "short-secret" }
+            })
+            .Build();
+        var prodEnv = new TestHostEnvironment(Environments.Production);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => new AuthService(shortSecretConfig, prodEnv));
+        Assert.Contains("shorter than 32 characters", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Constructor_GeneratesDevSecret_WhenSecretMissingInDevelopment()
+    {
+        var emptyConfig = new ConfigurationBuilder().Build();
+        var devEnv = new TestHostEnvironment(Environments.Development);
+
+        var auth = new AuthService(emptyConfig, devEnv);
+
+        Assert.NotNull(auth.Secret);
+        Assert.True(auth.Secret.Length >= 32);
+        Assert.StartsWith(AuthService.DevOnlySecretPrefix, auth.Secret);
     }
 }

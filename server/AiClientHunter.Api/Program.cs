@@ -6,10 +6,12 @@ using AiClientHunter.Api.Jobs;
 using AiClientHunter.Api.Services;
 using AiClientHunter.Api.Sources;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,19 +28,68 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 });
 
-// CORS: Allow local dev, LAN, and public tunnel origins
+// CORS: Read from config section Cors:AllowedOrigins (env Cors__AllowedOrigins__0 etc.)
+// An empty list means "no cross-origin allowed" since the React build is served from the same origin in production.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?.Where(o => !string.IsNullOrWhiteSpace(o))
+    .Select(o => o.Trim().TrimEnd('/'))
+    .ToArray() ?? [];
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
-        policy.SetIsOriginAllowed(_ => true)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials());
+    {
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+    });
 });
+
+// Rate limiting: fixed window, 5 attempts per minute per IP for login
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsJsonAsync(new { error = "Too many login attempts. Please try again later." }, token);
+    };
+    options.AddPolicy("login", httpContext =>
+    {
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
+});
+
+// JWT Secret: Read Jwt:Secret from configuration (env var Jwt__Secret).
+// If missing or shorter than 32 characters, throw on startup in Production; in Development use clearly-labelled dev-only value.
+var jwtSecret = builder.Configuration["Jwt:Secret"];
+if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
+{
+    if (builder.Environment.IsProduction())
+    {
+        throw new InvalidOperationException("Jwt:Secret configuration is missing or shorter than 32 characters in Production environment. Please set the Jwt__Secret environment variable.");
+    }
+
+    jwtSecret = $"dev-only-generated-secret-{Guid.NewGuid():N}{Guid.NewGuid():N}";
+    builder.Configuration["Jwt:Secret"] = jwtSecret;
+}
 
 // Register AuthService & JWT Authentication
 builder.Services.AddSingleton<AuthService>();
-var jwtKey = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"] ?? "AiClientHunter_Super_Secret_Jwt_Signing_Key_2026_Secure_Key!");
+var jwtKey = Encoding.UTF8.GetBytes(jwtSecret);
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "AiClientHunter";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "AiClientHunter";
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opts =>
     {
@@ -48,8 +99,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "AiClientHunter",
-            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "AiClientHunter",
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(jwtKey)
         };
     });
@@ -153,6 +204,7 @@ builder.Services.AddHostedService<JobWorker>();
 var app = builder.Build();
 
 app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -173,7 +225,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         await db.Database.EnsureCreatedAsync();
-        await DbSeeder.SeedAsync(db);
+        await DbSeeder.SeedAsync(db, app.Environment.IsDevelopment(), app.Logger);
     }
     catch (Exception ex)
     {

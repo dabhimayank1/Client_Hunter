@@ -1,23 +1,45 @@
 using AiClientHunter.Api.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace AiClientHunter.Api.Data;
 
 public static class DbSeeder
 {
-    public static async Task SeedAsync(AppDbContext db)
+    public static async Task SeedAsync(AppDbContext db, bool isDevelopment = false, ILogger? logger = null)
     {
         if (!await db.Users.AnyAsync())
         {
-            db.Users.Add(new AppUser
+            var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
+            var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+
+            if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
             {
-                Email = "admin@clienthunter.local",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123", workFactor: 11),
-                Role = "admin",
-                CreatedAt = DateTime.UtcNow
-            });
-            await db.SaveChangesAsync();
+                if (adminPassword.Length >= 10)
+                {
+                    db.Users.Add(new AppUser
+                    {
+                        Email = adminEmail.Trim().ToLowerInvariant(),
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword, workFactor: 11),
+                        Role = "admin",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    await db.SaveChangesAsync();
+                    logger?.LogInformation("Initial admin user seeded successfully for {Email}", adminEmail);
+                }
+                else
+                {
+                    logger?.LogWarning("ADMIN_PASSWORD is shorter than 10 characters. No admin user seeded.");
+                }
+            }
+            else
+            {
+                logger?.LogWarning("ADMIN_EMAIL or ADMIN_PASSWORD environment variable not set. No admin user seeded.");
+            }
         }
+
+        // Keep the 3 sample leads only in Development
+        if (!isDevelopment) return;
 
         if (await db.Leads.AnyAsync()) return;
 

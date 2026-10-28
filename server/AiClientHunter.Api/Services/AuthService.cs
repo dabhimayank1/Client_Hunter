@@ -2,16 +2,46 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AiClientHunter.Api.Domain;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 
 namespace AiClientHunter.Api.Services;
 
-public class AuthService(IConfiguration config)
+public class AuthService
 {
-    private readonly string _secret = config["Jwt:Secret"] ?? "AiClientHunter_Super_Secret_Jwt_Signing_Key_2026_Secure_Key!";
-    private readonly string _issuer = config["Jwt:Issuer"] ?? "AiClientHunter";
-    private readonly string _audience = config["Jwt:Audience"] ?? "AiClientHunter";
-    private readonly int _expiryMinutes = int.TryParse(config["Jwt:ExpiryMinutes"], out var m) ? m : 1440;
+    public const string DevOnlySecretPrefix = "dev-only-generated-secret-auth-";
+
+    private readonly string _secret;
+    private readonly string _issuer;
+    private readonly string _audience;
+    private readonly int _expiryMinutes;
+
+    public AuthService(IConfiguration config) : this(config, null)
+    {
+    }
+
+    public AuthService(IConfiguration config, IHostEnvironment? env)
+    {
+        _issuer = config["Jwt:Issuer"] ?? "AiClientHunter";
+        _audience = config["Jwt:Audience"] ?? "AiClientHunter";
+        _expiryMinutes = int.TryParse(config["Jwt:ExpiryMinutes"], out var m) ? m : 480;
+
+        var secret = config["Jwt:Secret"];
+        var isDev = env?.IsDevelopment() ?? string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(secret) || secret.Length < 32)
+        {
+            if (!isDev)
+            {
+                throw new InvalidOperationException("Jwt:Secret configuration is missing or shorter than 32 characters in Production.");
+            }
+            secret = $"{DevOnlySecretPrefix}{Guid.NewGuid():N}{Guid.NewGuid():N}";
+        }
+
+        _secret = secret;
+    }
+
+    public string Secret => _secret;
 
     public string HashPassword(string password)
     {
