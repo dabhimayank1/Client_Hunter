@@ -73,7 +73,7 @@ async function scrapeGoogleMaps(city, category, limit = 15) {
     } catch (e) {}
 
     const query = `${category} in ${city}`;
-    const url = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
+    const url = `https://www.google.com/maps/search/${encodeURIComponent(query)}?hl=en&gl=in`;
 
     try {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
@@ -83,10 +83,12 @@ async function scrapeGoogleMaps(city, category, limit = 15) {
     }
 
     try {
-      const consentBtn = await page.$('button[aria-label*="Accept all"], button[aria-label*="Agree"], form[action*="consent"] button');
+      const consentBtn = await page.$(
+        'button[aria-label*="Accept all" i], button[aria-label*="Agree" i], button[aria-label*="akzeptieren" i], button#L2AG9b, form[action*="consent"] button, button[data-ved]'
+      );
       if (consentBtn) {
         await consentBtn.click().catch(() => {});
-        await new Promise((r) => setTimeout(r, 1200));
+        await new Promise((r) => setTimeout(r, 1500));
       }
     } catch (e) {}
 

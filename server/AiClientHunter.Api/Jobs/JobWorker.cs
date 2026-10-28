@@ -144,10 +144,10 @@ public class JobWorker(
 
             // Google Contact Details Enrichment:
             // Check candidate businesses on Google Maps/Search to find missing Phone, Website, Email, and Address
-            // (Exclude 'google' source because it already originated directly from Google Maps)
             var enrichmentCandidates = candidateList
-                .Where(r => r.SourceName != "google" && r.SourceName != "freelancer" && r.SourceName != "upwork" && r.SourceName != "reddit" && r.SourceName != "linkedin")
-                .Where(r => string.IsNullOrWhiteSpace(r.Phone) || string.IsNullOrWhiteSpace(r.Website) || string.IsNullOrWhiteSpace(r.Email))
+                .Where(r => r.SourceName != "freelancer" && r.SourceName != "upwork" && r.SourceName != "reddit" && r.SourceName != "linkedin")
+                .Where(r => string.IsNullOrWhiteSpace(r.Phone))
+                .Take(10)
                 .Select(r => (r.Name, r.City))
                 .ToList();
 

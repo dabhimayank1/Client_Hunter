@@ -94,7 +94,7 @@ function cleanNameForSearch(name) {
 async function enrichSingle(page, name, city) {
   const cleanName = cleanNameForSearch(name);
   const query = `${cleanName} ${city || ""}`.trim();
-  const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
+  const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}?hl=en&gl=in`;
 
   try {
     await page.goto(mapsUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
@@ -102,8 +102,18 @@ async function enrichSingle(page, name, city) {
     // Timeout or partial load
   }
 
+  try {
+    const consentBtn = await page.$(
+      'button[aria-label*="Accept all" i], button[aria-label*="Agree" i], button[aria-label*="akzeptieren" i], button#L2AG9b, form[action*="consent"] button'
+    );
+    if (consentBtn) {
+      await consentBtn.click().catch(() => {});
+      await new Promise((r) => setTimeout(r, 1200));
+    }
+  } catch (e) {}
+
   // Wait a moment for dynamic cards to populate
-  await new Promise((r) => setTimeout(r, 2800));
+  await new Promise((r) => setTimeout(r, 2000));
 
   const data = await page.evaluate(() => {
     // 1. Phone number
