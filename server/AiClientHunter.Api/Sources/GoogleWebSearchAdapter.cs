@@ -74,12 +74,6 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
                 }
             }
 
-            // Strict no-website requirement: Discard businesses that already have an official website
-            if (officialWebsite != null || item.DestinationUrl?.Contains("website-listed-on-maps") == true)
-            {
-                continue;
-            }
-
             var record = new RawRecord(
                 SourceName: "google",
                 SourceId: $"web/{Guid.NewGuid():N}",
@@ -145,33 +139,46 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
             await proc.WaitForExitAsync(ct);
 
             var output = await stdoutTask;
+            var err = await stderrTask;
+
+            if (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err))
+            {
+                log.LogWarning("Google Maps scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
+            }
+
             if (!string.IsNullOrWhiteSpace(output))
             {
-                using var doc = JsonDocument.Parse(output);
-                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                var startIndex = output.IndexOf('[');
+                var endIndex = output.LastIndexOf(']');
+                if (startIndex >= 0 && endIndex > startIndex)
                 {
-                    foreach (var el in doc.RootElement.EnumerateArray())
+                    var jsonArray = output.Substring(startIndex, endIndex - startIndex + 1);
+                    using var doc = JsonDocument.Parse(jsonArray);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Array)
                     {
-                        var name = el.GetProperty("name").GetString() ?? "";
-                        if (string.IsNullOrWhiteSpace(name)) continue;
-
-                        var phone = el.TryGetProperty("phone", out var p) ? p.GetString() : null;
-                        var address = el.TryGetProperty("address", out var a) ? a.GetString() : null;
-                        var hasWebsite = el.TryGetProperty("hasWebsite", out var hw) && hw.GetBoolean();
-                        var website = el.TryGetProperty("website", out var w) ? w.GetString() : null;
-                        if (hasWebsite && string.IsNullOrWhiteSpace(website))
+                        foreach (var el in doc.RootElement.EnumerateArray())
                         {
-                            website = "http://website-listed-on-maps";
-                        }
+                            var name = el.GetProperty("name").GetString() ?? "";
+                            if (string.IsNullOrWhiteSpace(name)) continue;
 
-                        items.Add(new SearchItem(
-                            Title: name,
-                            Snippet: address ?? $"{city}, India",
-                            DestinationUrl: website,
-                            Phone: phone,
-                            Email: null,
-                            Address: address
-                        ));
+                            var phone = el.TryGetProperty("phone", out var p) ? p.GetString() : null;
+                            var address = el.TryGetProperty("address", out var a) ? a.GetString() : null;
+                            var hasWebsite = el.TryGetProperty("hasWebsite", out var hw) && hw.GetBoolean();
+                            var website = el.TryGetProperty("website", out var w) ? w.GetString() : null;
+                            if (hasWebsite && string.IsNullOrWhiteSpace(website))
+                            {
+                                website = "http://website-listed-on-maps";
+                            }
+
+                            items.Add(new SearchItem(
+                                Title: name,
+                                Snippet: address ?? $"{city}, India",
+                                DestinationUrl: website,
+                                Phone: phone,
+                                Email: null,
+                                Address: address
+                            ));
+                        }
                     }
                 }
             }

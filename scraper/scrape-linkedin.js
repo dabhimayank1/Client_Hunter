@@ -30,13 +30,16 @@ async function scrapeLinkedIn(query, limit = 15) {
   try {
     const browserPath = getBrowserPath();
     browser = await puppeteer.launch({
-      headless: "new",
+      headless: true,
       executablePath: browserPath,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
+        "--no-zygote",
+        "--single-process",
+        "--disable-accelerated-2d-canvas",
         "--disable-blink-features=AutomationControlled",
         "--lang=en-US,en",
         "--window-size=1280,800",

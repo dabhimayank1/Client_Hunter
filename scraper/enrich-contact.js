@@ -173,13 +173,16 @@ async function enrichBatch(items) {
 
   const browserPath = getBrowserPath();
   const browser = await puppeteer.launch({
-    headless: "new",
+    headless: true,
     executablePath: browserPath,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
+      "--no-zygote",
+      "--single-process",
+      "--disable-accelerated-2d-canvas",
       "--lang=en-US,en",
     ],
   });
@@ -195,6 +198,22 @@ async function enrichBatch(items) {
       await page.setUserAgent(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
       );
+      try {
+        await page.setCookie(
+          {
+            name: "SOCS",
+            value: "CAESHAgBEhJnd3NfMjAyNDA2MTAtMF9SQzIaAmVuIAEaBgiA_L20Bg",
+            domain: ".google.com",
+            path: "/",
+          },
+          {
+            name: "CONSENT",
+            value: "PENDING+999",
+            domain: ".google.com",
+            path: "/",
+          }
+        );
+      } catch (e) {}
 
       while (queue.length > 0) {
         const item = queue.shift();

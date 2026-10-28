@@ -48,16 +48,28 @@ public class ZaubaCorpSourceAdapter(ILogger<ZaubaCorpSourceAdapter> log) : ISour
             await proc.WaitForExitAsync(ct);
 
             var output = await stdoutTask;
+            var err = await stderrTask;
+
+            if (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err))
+            {
+                log.LogWarning("Zauba Corp scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
+            }
+
             if (!string.IsNullOrWhiteSpace(output))
             {
-                using var doc = JsonDocument.Parse(output);
-                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                var startIndex = output.IndexOf('[');
+                var endIndex = output.LastIndexOf(']');
+                if (startIndex >= 0 && endIndex > startIndex)
                 {
-                    foreach (var el in doc.RootElement.EnumerateArray())
+                    var jsonArray = output.Substring(startIndex, endIndex - startIndex + 1);
+                    using var doc = JsonDocument.Parse(jsonArray);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Array)
                     {
-                        if (records.Count >= fetchLimit) break;
+                        foreach (var el in doc.RootElement.EnumerateArray())
+                        {
+                            if (records.Count >= fetchLimit) break;
 
-                        var cin = el.TryGetProperty("cin", out var cinProp) ? cinProp.GetString() ?? Guid.NewGuid().ToString("N") : Guid.NewGuid().ToString("N");
+                            var cin = el.TryGetProperty("cin", out var cinProp) ? cinProp.GetString() ?? Guid.NewGuid().ToString("N") : Guid.NewGuid().ToString("N");
                         var name = el.TryGetProperty("name", out var nProp) ? nProp.GetString() ?? "" : "";
                         if (string.IsNullOrWhiteSpace(name)) continue;
 
@@ -96,6 +108,7 @@ public class ZaubaCorpSourceAdapter(ILogger<ZaubaCorpSourceAdapter> log) : ISour
                             RetrievedAt: DateTime.UtcNow,
                             Email: null
                         ));
+                        }
                     }
                 }
             }

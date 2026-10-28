@@ -65,14 +65,26 @@ public class ContactEnrichmentService(ILogger<ContactEnrichmentService> log)
             await proc.WaitForExitAsync(ct);
 
             var output = await stdoutTask;
+            var err = await stderrTask;
+
+            if (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err))
+            {
+                log.LogWarning("Contact enrichment scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
+            }
+
             if (!string.IsNullOrWhiteSpace(output))
             {
-                using var doc = JsonDocument.Parse(output);
-                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                var startIndex = output.IndexOf('[');
+                var endIndex = output.LastIndexOf(']');
+                if (startIndex >= 0 && endIndex > startIndex)
                 {
-                    foreach (var el in doc.RootElement.EnumerateArray())
+                    var jsonArray = output.Substring(startIndex, endIndex - startIndex + 1);
+                    using var doc = JsonDocument.Parse(jsonArray);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Array)
                     {
-                        var name = el.TryGetProperty("name", out var nProp) ? nProp.GetString() ?? "" : "";
+                        foreach (var el in doc.RootElement.EnumerateArray())
+                        {
+                            var name = el.TryGetProperty("name", out var nProp) ? nProp.GetString() ?? "" : "";
                         if (string.IsNullOrWhiteSpace(name)) continue;
 
                         var city = el.TryGetProperty("city", out var cProp) ? cProp.GetString() : null;
@@ -82,7 +94,8 @@ public class ContactEnrichmentService(ILogger<ContactEnrichmentService> log)
                         var address = el.TryGetProperty("address", out var aProp) ? aProp.GetString() : null;
                         var enriched = el.TryGetProperty("enriched", out var enProp) && enProp.GetBoolean();
 
-                        results[name.Trim()] = new EnrichedContact(name, city, phone, website, email, address, enriched);
+                            results[name.Trim()] = new EnrichedContact(name, city, phone, website, email, address, enriched);
+                        }
                     }
                 }
             }

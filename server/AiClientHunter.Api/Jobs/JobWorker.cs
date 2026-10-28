@@ -120,8 +120,21 @@ public class JobWorker(
             var candidateRecords = records.AsEnumerable();
             if (!isPlatformJobSource)
             {
-                // Strict no-website requirement: Discard raw records that already have a website listed
-                candidateRecords = records.Where(r => string.IsNullOrWhiteSpace(r.Website));
+                // Strict no-website requirement for potential leads
+                if (job.LeadType == "potential")
+                {
+                    var noWebsiteCandidates = records.Where(r => string.IsNullOrWhiteSpace(r.Website)).ToList();
+                    if (noWebsiteCandidates.Count > 0)
+                    {
+                        candidateRecords = noWebsiteCandidates;
+                    }
+                    else
+                    {
+                        log.LogInformation("No businesses without websites found for {Category} in {City}. Keeping all {Count} verified records.",
+                            job.Category, job.City, records.Count);
+                        candidateRecords = records;
+                    }
+                }
             }
 
             // Take extra candidate cushion so after Google enrichment discards records with existing websites,
@@ -183,7 +196,8 @@ public class JobWorker(
 
                 // STRICT NO-WEBSITE FILTER (For all directory/registry sources: Justdial, Zauba Corp, Google, OSM):
                 // If the business already has an active website (discovered via source or Google enrichment), DISCARD!
-                if (!isPlatformJob)
+                bool hasNoWebsiteCandidates = candidateList.Any(c => string.IsNullOrWhiteSpace(c.Website));
+                if (!isPlatformJob && job.LeadType == "potential" && hasNoWebsiteCandidates)
                 {
                     if (!string.IsNullOrWhiteSpace(currentWebsite) || (enriched != null && !string.IsNullOrWhiteSpace(enriched.Website)))
                     {
@@ -298,7 +312,7 @@ public class JobWorker(
 
                     // STRICT NO-WEBSITE FILTER (Applies to all non-platform sources):
                     // If website checker found a verified active website or any website exists, discard!
-                    if (!isPlatformJob && (webResult.Status == "verified" || !string.IsNullOrWhiteSpace(webResult.Url) || !string.IsNullOrWhiteSpace(currentWebsite)))
+                    if (!isPlatformJob && job.LeadType == "potential" && hasNoWebsiteCandidates && (webResult.Status == "verified" || !string.IsNullOrWhiteSpace(webResult.Url) || !string.IsNullOrWhiteSpace(currentWebsite)))
                     {
                         log.LogInformation("Strict Filter: Discarding '{Name}' because an active website was verified ({Url}).", r.Name, webResult.Url ?? currentWebsite);
                         continue;

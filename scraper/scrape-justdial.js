@@ -39,13 +39,16 @@ function cleanPhone(raw) {
 async function scrapeJustdial(city = "Ahmedabad", category = "Dental-Clinics", limit = 15) {
   const browserPath = getBrowserPath();
   const browser = await puppeteer.launch({
-    headless: "new",
+    headless: true,
     executablePath: browserPath,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
+      "--no-zygote",
+      "--single-process",
+      "--disable-accelerated-2d-canvas",
       "--lang=en-US,en",
     ],
   });

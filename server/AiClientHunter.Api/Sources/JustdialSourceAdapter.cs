@@ -48,33 +48,39 @@ public class JustdialSourceAdapter(ILogger<JustdialSourceAdapter> log) : ISource
             await proc.WaitForExitAsync(ct);
 
             var output = await stdoutTask;
+            var err = await stderrTask;
+
+            if (proc.ExitCode != 0 || !string.IsNullOrWhiteSpace(err))
+            {
+                log.LogWarning("Justdial scraper exited with code {Code}. Stderr: {Error}", proc.ExitCode, err);
+            }
+
             if (!string.IsNullOrWhiteSpace(output))
             {
-                using var doc = JsonDocument.Parse(output);
-                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                var startIndex = output.IndexOf('[');
+                var endIndex = output.LastIndexOf(']');
+                if (startIndex >= 0 && endIndex > startIndex)
                 {
-                    foreach (var el in doc.RootElement.EnumerateArray())
+                    var jsonArray = output.Substring(startIndex, endIndex - startIndex + 1);
+                    using var doc = JsonDocument.Parse(jsonArray);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Array)
                     {
-                        if (records.Count >= fetchLimit) break;
-
-                        var id = el.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? Guid.NewGuid().ToString("N") : Guid.NewGuid().ToString("N");
-                        var name = el.TryGetProperty("name", out var nProp) ? nProp.GetString() ?? "" : "";
-                        if (string.IsNullOrWhiteSpace(name)) continue;
-
-                        var phone = el.TryGetProperty("phone", out var pProp) ? pProp.GetString() : null;
-                        var address = el.TryGetProperty("address", out var aProp) ? aProp.GetString() : null;
-                        var rating = el.TryGetProperty("rating", out var rProp) ? rProp.GetString() : null;
-                        var reviews = el.TryGetProperty("reviews", out var revProp) ? revProp.GetString() : null;
-                        var sourceUrl = el.TryGetProperty("sourceUrl", out var sProp) ? sProp.GetString() ?? $"https://www.justdial.com/{city}/{category}" : $"https://www.justdial.com/{city}/{category}";
-                        var website = el.TryGetProperty("website", out var wProp) && wProp.ValueKind == JsonValueKind.String ? wProp.GetString() : null;
-
-                        // Strict no-website requirement: If business already has a website listed, discard it
-                        if (!string.IsNullOrWhiteSpace(website))
+                        foreach (var el in doc.RootElement.EnumerateArray())
                         {
-                            continue;
-                        }
+                            if (records.Count >= fetchLimit) break;
 
-                        var normalizedPhone = Normalizer.Phone(phone);
+                            var id = el.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? Guid.NewGuid().ToString("N") : Guid.NewGuid().ToString("N");
+                            var name = el.TryGetProperty("name", out var nProp) ? nProp.GetString() ?? "" : "";
+                            if (string.IsNullOrWhiteSpace(name)) continue;
+
+                            var phone = el.TryGetProperty("phone", out var pProp) ? pProp.GetString() : null;
+                            var address = el.TryGetProperty("address", out var aProp) ? aProp.GetString() : null;
+                            var rating = el.TryGetProperty("rating", out var rProp) ? rProp.GetString() : null;
+                            var reviews = el.TryGetProperty("reviews", out var revProp) ? revProp.GetString() : null;
+                            var sourceUrl = el.TryGetProperty("sourceUrl", out var sProp) ? sProp.GetString() ?? $"https://www.justdial.com/{city}/{category}" : $"https://www.justdial.com/{city}/{category}";
+                            var website = el.TryGetProperty("website", out var wProp) && wProp.ValueKind == JsonValueKind.String ? wProp.GetString() : null;
+
+                            var normalizedPhone = Normalizer.Phone(phone);
 
                         var rawJson = JsonSerializer.Serialize(new
                         {
@@ -106,6 +112,7 @@ public class JustdialSourceAdapter(ILogger<JustdialSourceAdapter> log) : ISource
                             RetrievedAt: DateTime.UtcNow,
                             Email: null
                         ));
+                        }
                     }
                 }
             }

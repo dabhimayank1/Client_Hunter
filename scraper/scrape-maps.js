@@ -25,13 +25,16 @@ function getBrowserPath() {
 async function scrapeGoogleMaps(city, category, limit = 15) {
   const browserPath = getBrowserPath();
   const browser = await puppeteer.launch({
-    headless: "new",
+    headless: true,
     executablePath: browserPath,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
+      "--no-zygote",
+      "--single-process",
+      "--disable-accelerated-2d-canvas",
       "--lang=en-US,en",
       "--window-size=1280,800",
     ],
@@ -40,28 +43,53 @@ async function scrapeGoogleMaps(city, category, limit = 15) {
   let places = [];
   try {
     const page = await browser.newPage();
-  await page.setUserAgent(
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-  );
-  await page.setViewport({ width: 1280, height: 800 });
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    );
+    await page.setViewport({ width: 1280, height: 800 });
 
-  const query = `${category} in ${city}`;
-  const url = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
+    try {
+      await page.setCookie(
+        {
+          name: "SOCS",
+          value: "CAESHAgBEhJnd3NfMjAyNDA2MTAtMF9SQzIaAmVuIAEaBgiA_L20Bg",
+          domain: ".google.com",
+          path: "/",
+        },
+        {
+          name: "CONSENT",
+          value: "PENDING+999",
+          domain: ".google.com",
+          path: "/",
+        }
+      );
+    } catch (e) {}
 
-  try {
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
-  } catch (e) {
-    // ignore networkidle timeout if DOM loaded
-  }
+    const query = `${category} in ${city}`;
+    const url = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
 
-  // Wait for place cards to render
-  try {
-    await page.waitForSelector("div.Nv2PK, div[role='article'], a.hfpxzc", {
-      timeout: 10000,
-    });
-  } catch (e) {
-    // No results or direct place
-  }
+    try {
+      await page.goto(url, { waitUntil: "networkidle2", timeout: 25000 });
+    } catch (e) {
+      // ignore networkidle timeout if DOM loaded
+    }
+
+    try {
+      const consentBtn = await page.$('button[aria-label*="Accept all"], button[aria-label*="Agree"], form[action*="consent"] button');
+      if (consentBtn) {
+        await consentBtn.click().catch(() => {});
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+    } catch (e) {}
+
+    // Wait for place cards to render
+    try {
+      await page.waitForSelector("div.Nv2PK, div[role='article'], a.hfpxzc", {
+        timeout: 10000,
+      });
+    } catch (e) {
+      // No results or direct place
+    }
 
   // Auto-scroll feed panel to load more results if needed
   try {
