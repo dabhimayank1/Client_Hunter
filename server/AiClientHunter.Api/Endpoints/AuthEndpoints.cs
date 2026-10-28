@@ -23,7 +23,7 @@ public static class AuthEndpoints
             var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email);
 
             if (user is null || !auth.VerifyPassword(req.Password, user.PasswordHash))
-                return Results.Unauthorized();
+                return Results.Json(new { error = "Invalid email or password" }, statusCode: StatusCodes.Status401Unauthorized);
 
             var token = auth.GenerateJwtToken(user);
 
@@ -45,51 +45,9 @@ public static class AuthEndpoints
                     user.Role
                 }
             });
-        });
+        }).RequireRateLimiting("login");
 
-        // 2. POST /api/auth/register
-        g.MapPost("/register", async (RegisterRequest req, AppDbContext db, AuthService auth) =>
-        {
-            if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
-                return Results.BadRequest(new { error = "Email and password are required" });
-
-            if (req.Password.Length < 6)
-                return Results.BadRequest(new { error = "Password must be at least 6 characters long" });
-
-            var email = req.Email.Trim().ToLowerInvariant();
-            var exists = await db.Users.AnyAsync(u => u.Email.ToLower() == email);
-            if (exists)
-                return Results.Conflict(new { error = "User with this email already exists" });
-
-            var role = string.IsNullOrWhiteSpace(req.Role) ? "admin" : req.Role.Trim().ToLowerInvariant();
-
-            var user = new AppUser
-            {
-                Email = email,
-                PasswordHash = auth.HashPassword(req.Password),
-                Role = role,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            db.Users.Add(user);
-            await db.SaveChangesAsync();
-
-            var token = auth.GenerateJwtToken(user);
-
-            return Results.Created($"/api/auth/me", new
-            {
-                message = "User registered successfully",
-                token,
-                user = new
-                {
-                    user.Id,
-                    user.Email,
-                    user.Role
-                }
-            });
-        });
-
-        // 3. GET /api/auth/me (Current user info)
+        // 2. GET /api/auth/me (Current user info)
         g.MapGet("/me", [Authorize] async (ClaimsPrincipal claimsUser, AppDbContext db) =>
         {
             var userIdStr = claimsUser.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -111,4 +69,3 @@ public static class AuthEndpoints
 }
 
 public record LoginRequest(string Email, string Password);
-public record RegisterRequest(string Email, string Password, string? Role);

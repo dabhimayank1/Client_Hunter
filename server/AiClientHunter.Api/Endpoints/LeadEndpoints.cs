@@ -18,7 +18,7 @@ public static class LeadEndpoints
 
     public static void MapLeadEndpoints(this WebApplication app)
     {
-        var g = app.MapGroup("/api/leads");
+        var g = app.MapGroup("/api/leads").RequireAuthorization();
 
         // 1. GET /api/leads/meta (Dynamic filter options and counts)
         g.MapGet("meta", async (AppDbContext db) =>

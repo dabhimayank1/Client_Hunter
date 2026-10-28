@@ -10,7 +10,7 @@ public static class DraftEndpoints
 {
     public static void MapDraftEndpoints(this WebApplication app)
     {
-        var g = app.MapGroup("/api/drafts");
+        var g = app.MapGroup("/api/drafts").RequireAuthorization();
 
         // 1. GET /api/drafts (Approval Queue list, skips suppressed leads)
         g.MapGet("", async (AppDbContext db, string? status) =>
@@ -150,7 +150,7 @@ public static class DraftEndpoints
         });
 
         // 5. POST /api/drafts/{id:long}/mark-sent (Manual Outreach Confirmation)
-        g.MapPost("{id:long}/mark-sent", async (long id, AppDbContext db) =>
+        g.MapPost("{id:long}/mark-sent", async (long id, AppDbContext db, ClaimsPrincipal claimsUser) =>
         {
             var d = await db.MessageDrafts.Include(x => x.Lead).FirstOrDefaultAsync(x => x.Id == id);
             if (d is null) return Results.NotFound();
@@ -178,10 +178,15 @@ public static class DraftEndpoints
                 });
             }
 
+            var actor = claimsUser.Identity?.Name
+                        ?? claimsUser.FindFirstValue(ClaimTypes.Name)
+                        ?? claimsUser.FindFirstValue(ClaimTypes.Email)
+                        ?? "user";
+
             db.AuditLogs.Add(new AuditLog
             {
                 Action = "draft_marked_sent",
-                Actor = "local-user",
+                Actor = actor,
                 Detail = $"Outreach confirmed sent for lead #{d.LeadId}"
             });
 

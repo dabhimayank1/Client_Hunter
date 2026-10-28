@@ -9,7 +9,7 @@ public static class JobEndpoints
 {
     public static void MapJobEndpoints(this WebApplication app)
     {
-        var g = app.MapGroup("/api/search-jobs");
+        var g = app.MapGroup("/api/search-jobs").RequireAuthorization();
 
         // 1. POST /api/search-jobs (Validate, create, and enqueue search job)
         g.MapPost("", async (SearchJobRequest req, AppDbContext db, JobQueue queue) =>
