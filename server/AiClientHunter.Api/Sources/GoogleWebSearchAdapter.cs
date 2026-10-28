@@ -29,15 +29,15 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
         // 1. Primary engine: Headless Chrome Google Maps Scraper (Extracts real contact numbers & physical addresses)
         var searchItems = await FetchHeadlessMapsAsync(req.City, req.Category, fetchLimit, ct);
 
-        // 2. Secondary engine: Supplement with OpenStreetMap (Nominatim) only if Maps found fewer than requested limit
-        if (searchItems.Count < req.Limit)
+        // 2. Secondary engine: Supplement with OpenStreetMap (Nominatim) only if Maps found 0 results
+        if (searchItems.Count == 0)
         {
-            var osmItems = await FetchNominatimAsync(req.City, req.Category, req.Limit - searchItems.Count, ct);
+            var osmItems = await FetchNominatimAsync(req.City, req.Category, req.Limit, ct);
             searchItems.AddRange(osmItems);
         }
 
-        // 3. Fallback engine: Bing search with strict city verification only if still needed
-        if (searchItems.Count < req.Limit)
+        // 3. Fallback engine: Bing search with strict city verification only if still 0
+        if (searchItems.Count == 0)
         {
             var bingResults = await FetchBingAsync(req.City, req.Category, ct);
             searchItems.AddRange(bingResults);
@@ -259,6 +259,10 @@ public class GoogleWebSearchAdapter(HttpClient http, ILogger<GoogleWebSearchAdap
                         }
 
                         if (string.IsNullOrWhiteSpace(name) || name.Length < 3) continue;
+                        if (name.Contains("road", StringComparison.OrdinalIgnoreCase) || 
+                            name.Contains("highway", StringComparison.OrdinalIgnoreCase) || 
+                            name.Contains("expressway", StringComparison.OrdinalIgnoreCase) ||
+                            name.Contains("bypass", StringComparison.OrdinalIgnoreCase)) continue;
                         if (seenNames.Contains(name)) continue;
                         seenNames.Add(name);
 
