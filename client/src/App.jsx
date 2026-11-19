@@ -150,9 +150,9 @@ function AppLayout({ health, children }) {
         <div className="sidebar-section-label">SOURCES CONNECTED</div>
         <div className="sidebar-sources-list">
           <span className="source-pill">🌐 Google</span>
-          <span className="source-pill">📞 Justdial</span>
-          <span className="source-pill">💼 Upwork</span>
+          <span className="source-pill">🗺️ OpenStreetMap</span>
           <span className="source-pill">🧑‍💻 Freelancer</span>
+          <span className="source-pill">💼 Upwork</span>
           <span className="source-pill">🔴 Reddit</span>
           <span className="source-pill">🏢 Zauba Corp</span>
           <span className="source-pill">💼 LinkedIn</span>
