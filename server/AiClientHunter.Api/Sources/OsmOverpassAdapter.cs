@@ -6,6 +6,13 @@ public class OsmOverpassAdapter(HttpClient http, ILogger<OsmOverpassAdapter> log
 {
     public string Name => "osm";
 
+    private static readonly string[] OverpassEndpoints =
+    [
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass.private.coffee/api/interpreter",
+        "https://overpass-api.de/api/interpreter"
+    ];
+
     public async Task<IReadOnlyList<RawRecord>> FetchAsync(SearchRequest req, CancellationToken ct)
     {
         if (!OsmMaps.CityBoxes.TryGetValue(req.City, out var bbox))
@@ -21,32 +28,46 @@ public class OsmOverpassAdapter(HttpClient http, ILogger<OsmOverpassAdapter> log
         var query = $"[out:json][timeout:60][bbox:{bbox}];nwr{filter};out center tags meta;";
         log.LogInformation("Querying OpenStreetMap Overpass API for {Category} in {City} (bbox: {Bbox}).", req.Category, req.City, bbox);
 
-        using var body = new FormUrlEncodedContent(new[]
-        {
-            new KeyValuePair<string, string>("data", query)
-        });
+        HttpResponseMessage? resp = null;
+        Exception? lastEx = null;
 
-        HttpResponseMessage resp;
-        try
+        foreach (var endpoint in OverpassEndpoints)
         {
-            resp = await http.PostAsync("https://overpass-api.de/api/interpreter", body, ct);
-        }
-        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
-        {
-            throw new InvalidOperationException("Overpass API request timed out. The public server may be busy, please retry in a few moments.", ex);
+            try
+            {
+                using var body = new FormUrlEncodedContent(new[]
+                {
+                    new KeyValuePair<string, string>("data", query)
+                });
+
+                var r = await http.PostAsync(endpoint, body, ct);
+                if (r.IsSuccessStatusCode)
+                {
+                    resp = r;
+                    break;
+                }
+
+                if ((int)r.StatusCode == 429)
+                {
+                    log.LogWarning("Overpass mirror {Endpoint} rate limited (HTTP 429), trying next mirror...", endpoint);
+                    r.Dispose();
+                    continue;
+                }
+
+                log.LogWarning("Overpass mirror {Endpoint} returned {StatusCode}, trying next mirror...", endpoint, r.StatusCode);
+                r.Dispose();
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                lastEx = ex;
+                log.LogWarning("Overpass mirror {Endpoint} failed ({Message}), trying next mirror...", endpoint, ex.Message);
+            }
         }
 
-        if ((int)resp.StatusCode == 429)
+        if (resp == null)
         {
-            throw new InvalidOperationException("Overpass API rate limited (HTTP 429). Please wait 60 seconds before making another query.");
+            throw new InvalidOperationException($"All OpenStreetMap Overpass servers were unreachable. Public servers may be busy, please retry in a moment. (Last error: {lastEx?.Message})", lastEx);
         }
-
-        if ((int)resp.StatusCode == 504)
-        {
-            throw new InvalidOperationException("Overpass API Gateway Timeout (HTTP 504). Please retry with a smaller limit or wait.");
-        }
-
-        resp.EnsureSuccessStatusCode();
 
         await using var stream = await resp.Content.ReadAsStreamAsync(ct);
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);

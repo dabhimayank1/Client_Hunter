@@ -141,8 +141,11 @@ builder.Services.AddDbContext<AppDbContext>(o =>
 // Register Phase 5 OpenStreetMap Overpass Source Adapter
 builder.Services.AddHttpClient<OsmOverpassAdapter>(c =>
 {
-    c.Timeout = TimeSpan.FromSeconds(90);
+    c.Timeout = TimeSpan.FromSeconds(60);
     c.DefaultRequestHeaders.UserAgent.ParseAdd("AiClientHunter/0.1 (contact: clienthunter@local.dev)");
+}).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    ConnectTimeout = TimeSpan.FromSeconds(10)
 });
 builder.Services.AddTransient<ISourceAdapter>(sp => sp.GetRequiredService<OsmOverpassAdapter>());
 
