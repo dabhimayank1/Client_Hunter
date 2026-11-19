@@ -227,16 +227,20 @@ async function scrapeGoogleMaps(city, category, limit = 15) {
 }
 
 // CLI entry point
-const [cityArg, catArg, limitArg] = process.argv.slice(2);
-const city = cityArg || "Jamnagar";
-const category = catArg || "Dental Clinic";
-const limit = parseInt(limitArg, 10) || 15;
+if (require.main === module) {
+  const [cityArg, catArg, limitArg] = process.argv.slice(2);
+  const city = cityArg || "Jamnagar";
+  const category = catArg || "Dental Clinic";
+  const limit = parseInt(limitArg, 10) || 15;
 
-scrapeGoogleMaps(city, category, limit)
-  .then((results) => {
-    console.log(JSON.stringify(results, null, 2));
-  })
-  .catch((err) => {
-    console.error("Scraping error:", err);
-    process.exit(1);
-  });
+  scrapeGoogleMaps(city, category, limit)
+    .then((results) => {
+      console.log(JSON.stringify(results, null, 2));
+    })
+    .catch((err) => {
+      console.error("Scraping error:", err);
+      process.exit(1);
+    });
+}
+
+module.exports = { scrapeGoogleMaps };
