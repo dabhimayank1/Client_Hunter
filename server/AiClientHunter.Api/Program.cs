@@ -145,7 +145,26 @@ builder.Services.AddHttpClient<OsmOverpassAdapter>(c =>
     c.DefaultRequestHeaders.UserAgent.ParseAdd("AiClientHunter/0.1 (contact: clienthunter@local.dev)");
 }).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
 {
-    ConnectTimeout = TimeSpan.FromSeconds(10)
+    ConnectTimeout = TimeSpan.FromSeconds(10),
+    ConnectCallback = async (context, cancellationToken) =>
+    {
+        // Force IPv4 in Linux containers where IPv6 default route is unreachable
+        var host = context.DnsEndPoint.Host;
+        var ips = await System.Net.Dns.GetHostAddressesAsync(host, System.Net.Sockets.AddressFamily.InterNetwork, cancellationToken);
+        var targetIp = ips.FirstOrDefault() ?? throw new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.HostNotFound);
+
+        var socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+        try
+        {
+            await socket.ConnectAsync(new System.Net.IPEndPoint(targetIp, context.DnsEndPoint.Port), cancellationToken);
+            return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+    }
 });
 builder.Services.AddTransient<ISourceAdapter>(sp => sp.GetRequiredService<OsmOverpassAdapter>());
 
