@@ -73,6 +73,7 @@ async function scrapeZaubaCorp(city = "Ahmedabad", category = "Software", limit 
       "--disable-dev-shm-usage",
       "--disable-gpu",
       "--disable-accelerated-2d-canvas",
+      "--disable-blink-features=AutomationControlled",
       "--lang=en-US,en",
       ...getProxyArgs(),
     ],
@@ -81,10 +82,8 @@ async function scrapeZaubaCorp(city = "Ahmedabad", category = "Software", limit 
   const cleanCity = city.trim().toUpperCase();
   const nicCode = getNicCode(category);
   
-  // Construct Zauba URL
-  // e.g. https://www.zaubacorp.com/company-list/city-AHMEDABAD/status-Active/nic-72-company.html
-  // or https://www.zaubacorp.com/company-list/city-AHMEDABAD/status-Active/p-1-company.html
-  let url = `https://www.zaubacorp.com/company-list/city-${cleanCity}/status-Active/`;
+  // Construct Zauba URL: uses /companies-list/
+  let url = `https://www.zaubacorp.com/companies-list/city-${cleanCity}/status-Active/`;
   if (nicCode) {
     url += `${nicCode}-company.html`;
   } else {
@@ -93,6 +92,9 @@ async function scrapeZaubaCorp(city = "Ahmedabad", category = "Software", limit 
 
   const page = await browser.newPage();
   await attachProxyAuth(page);
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+  });
   await page.setUserAgent(
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
   );
@@ -100,8 +102,8 @@ async function scrapeZaubaCorp(city = "Ahmedabad", category = "Software", limit 
   const results = [];
 
   try {
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-    await new Promise((r) => setTimeout(r, 3500));
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 35000 });
+    await new Promise((r) => setTimeout(r, 4000));
 
     const rawData = await page.evaluate(() => {
       const text = document.body.innerText || "";
