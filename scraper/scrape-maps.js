@@ -76,8 +76,8 @@ async function scrapeGoogleMaps(city, category, limit = 15) {
     const url = `https://www.google.com/maps/search/${encodeURIComponent(query)}?hl=en&gl=in`;
 
     try {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
-      await new Promise((r) => setTimeout(r, 2000));
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 35000 });
+      await new Promise((r) => setTimeout(r, 2500));
     } catch (e) {
       // ignore timeout if DOM loaded
     }
@@ -88,14 +88,14 @@ async function scrapeGoogleMaps(city, category, limit = 15) {
       );
       if (consentBtn) {
         await consentBtn.click().catch(() => {});
-        await new Promise((r) => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, 2000));
       }
     } catch (e) {}
 
     // Wait for place cards to render
     try {
       await page.waitForSelector("div.Nv2PK, div[role='article'], a.hfpxzc", {
-        timeout: 10000,
+        timeout: 20000,
       });
     } catch (e) {
       // No results or direct place
