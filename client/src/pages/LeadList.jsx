@@ -401,13 +401,12 @@ export default function LeadList() {
               className="select-filter"
             >
               <option value="">All Platforms</option>
-              <option value="justdial">📞 Justdial</option>
-              <option value="zaubacorp">🏢 Zauba Corp</option>
+              <option value="google">🌐 Google Web</option>
               <option value="freelancer">🧑‍💻 Freelancer</option>
+              <option value="osm">🗺️ OpenStreetMap</option>
               <option value="upwork">💼 Upwork</option>
               <option value="reddit">🔴 Reddit</option>
-              <option value="google">🌐 Google Web</option>
-              <option value="osm">🗺️ OpenStreetMap</option>
+              <option value="zaubacorp">🏢 Zauba Corp</option>
               <option value="linkedin">💼 LinkedIn</option>
             </select>
           </div>
