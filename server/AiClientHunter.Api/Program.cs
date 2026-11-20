@@ -188,8 +188,12 @@ builder.Services.AddTransient<ISourceAdapter>(sp => sp.GetRequiredService<Freela
 builder.Services.AddTransient<UpworkSourceAdapter>();
 builder.Services.AddTransient<ISourceAdapter>(sp => sp.GetRequiredService<UpworkSourceAdapter>());
 
-// Register Reddit Source Adapter (Headless Scraper for [Hiring] Posts)
-builder.Services.AddTransient<RedditSourceAdapter>();
+// Register Reddit Source Adapter (Headless Scraper + Search Index Fallback for [Hiring] Posts)
+builder.Services.AddHttpClient<RedditSourceAdapter>(c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(30);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
+});
 builder.Services.AddTransient<ISourceAdapter>(sp => sp.GetRequiredService<RedditSourceAdapter>());
 
 // Register LinkedIn Source Adapter (Headless Scraper for Hiring Roles & Posts)
