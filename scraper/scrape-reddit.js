@@ -41,9 +41,9 @@ function extractBudget(text) {
 function isRealWebsiteProject(title, description = "") {
   const text = (title + " " + description).toLowerCase();
 
-  // 1. Exclude corporate employee jobs, internships, sales, marketing, and non-tech gigs
+  // 1. Exclude corporate employee jobs, internships, unpaid gigs, surveys, crypto spam
   const isJunkOrCorporateJob =
-    /(?:intern|sales|cold call|content creator|survey|voice actor|audio|voiceover|tutor|lesson|writer|article writer|virtual assistant|data entry|assistant|test ai|get paid to|crypto shill|promoter|full-time job|full time employee|w2|salary\s*:\s*\$[0-9]+k)/i.test(
+    /(?:internship|unpaid|cold call|survey|voice actor|audio|voiceover|tutor|lesson|article writer|virtual assistant|data entry|test ai|get paid to|crypto shill|promoter|full-time employee|w2\b|salary\s*:\s*\$[0-9]+k)/i.test(
       text
     );
   if (isJunkOrCorporateJob) return false;
@@ -51,13 +51,15 @@ function isRealWebsiteProject(title, description = "") {
   // 2. Exclude freelancers advertising themselves [FOR HIRE]
   if (/\[for\s*hire\]/i.test(title)) return false;
 
-  // 3. Must be an actual client project asking to build, design, or develop a website, app, portal, or SEO/marketing work
-  const isWebsiteOrDevProject =
-    /(?:website|web\s*app|web\s*dev|developer|full-?stack|front-?end|back-?end|landing\s*page|shopify|wordpress|woocommerce|build a site|create a site|redesign|web platform|software development|mvp|saas|3d\s*model|seo|search\s*engine|ranking|digital\s*marketing|local\s*seo|backlink|link\s*building|gmb)/i.test(
+  // 3. Must be an actual client hiring or paying for work
+  if (/\[(?:hiring|urgent|paid)\]/i.test(title)) return true;
+
+  const isClientProject =
+    /(?:website|web|developer|coder|programmer|software|engineer|app|mobile|designer|ui\/ux|graphic|frontend|backend|full-?stack|landing\s*page|shopify|wordpress|woocommerce|build a site|create a site|redesign|web platform|mvp|saas|seo|marketing|automation|bot|script|python|react|flutter)/i.test(
       text
     );
 
-  return isWebsiteOrDevProject;
+  return isClientProject;
 }
 
 async function scrapeReddit(query, limit = 15) {
@@ -86,6 +88,9 @@ async function scrapeReddit(query, limit = 15) {
 
     const page = await browser.newPage();
     await attachProxyAuth(page);
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+    });
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
     );
