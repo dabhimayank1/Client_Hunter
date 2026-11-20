@@ -1,0 +1,68 @@
+# ==============================================================================
+# AI CLIENT HUNTER - SYSTEM REQUIREMENTS & DEPENDENCY SPECIFICATION
+# ==============================================================================
+# Repository: Client_Hunter
+# Architecture: ASP.NET Core 9 Minimal API + React 19 SPA + Puppeteer Scrapers
+# Deployment: Docker / Render / Railway / Local Windows & Linux
+# ==============================================================================
+
+# --- 1. CORE SYSTEM RUNTIMES & PREREQUISITES ---
+# .NET 9.0 SDK or ASP.NET Core 9.0 Runtime
+dotnet-sdk >= 9.0.100
+aspnetcore-runtime >= 9.0.0
+
+# Node.js & NPM (for React Client & Headless Scrapers)
+nodejs >= 20.0.0
+npm >= 10.0.0
+
+# Headless Browser for Scrapers (Google Maps, Zauba Corp, Upwork)
+chromium >= 120.0.0
+# Or Google Chrome / Microsoft Edge on Windows / Linux
+
+# Containerization (Optional for Cloud Deployments)
+docker >= 24.0.0
+docker-compose >= 2.20.0
+
+
+# --- 2. BACKEND NUGET PACKAGES (.NET 9 C#) ---
+# Project: server/AiClientHunter.Api/AiClientHunter.Api.csproj
+BCrypt.Net-Next == 4.0.3
+CsvHelper == 33.1.0
+Microsoft.AspNetCore.Authentication.JwtBearer == 9.0.2
+Microsoft.EntityFrameworkCore.Design == 9.0.2
+Microsoft.EntityFrameworkCore.Sqlite == 9.0.2
+Microsoft.EntityFrameworkCore.SqlServer == 9.0.2
+
+
+# --- 3. FRONTEND NPM DEPENDENCIES (React 19) ---
+# Project: client/package.json
+react >= 19.0.0
+react-dom >= 19.0.0
+react-router-dom >= 7.18.4
+vite >= 7.0.0
+@vitejs/plugin-react >= 5.0.0
+
+
+# --- 4. SCRAPER NPM DEPENDENCIES (Node.js Puppeteer) ---
+# Project: scraper/package.json
+puppeteer-core >= 25.14.0
+
+
+# --- 5. SYSTEM ENVIRONMENT VARIABLES (CONFIG) ---
+# ASPNETCORE_ENVIRONMENT=Production
+# PORT=10000
+# USE_SQLITE=true
+# SQLITE_PATH=/app/data/clienthunter.db
+# SCRAPER_DIR=/app/scraper
+# PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+# PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+
+# --- 6. QUICK START COMMANDS ---
+# Local Windows / Dev:
+#   start.bat
+#
+# Docker Build:
+#   docker build -t client-hunter .
+#   docker run -p 10000:10000 client-hunter
+# ==============================================================================
