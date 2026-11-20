@@ -133,8 +133,12 @@ builder.Services.AddHttpClient<FreelancerSourceAdapter>(c =>
 });
 builder.Services.AddTransient<ISourceAdapter>(sp => sp.GetRequiredService<FreelancerSourceAdapter>());
 
-// Register Upwork Source Adapter (Headless Chrome Scraper)
-builder.Services.AddTransient<UpworkSourceAdapter>();
+// Register Upwork Source Adapter (Headless Scraper + Live Client Projects Fallback)
+builder.Services.AddHttpClient<UpworkSourceAdapter>(c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(30);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36");
+});
 builder.Services.AddTransient<ISourceAdapter>(sp => sp.GetRequiredService<UpworkSourceAdapter>());
 
 // Register Reddit Source Adapter (Headless Scraper + Search Index Fallback for [Hiring] Posts)
